@@ -53,7 +53,7 @@ Create aliass, an alias points to a configuration for a specific server.
 
 Take note though, no passwords are supported, you need to register your public key with the server.
 
-    [Passwordless ssh](http://www.linuxproblem.org/art_9.html)
+[Passwordless ssh](http://www.linuxproblem.org/art_9.html)
 
 Once you have your keys generated you can use this each time to send your pub key to a remote machine:
 
