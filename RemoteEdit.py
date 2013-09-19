@@ -54,7 +54,7 @@ def get_settings(window=None, create_if_missing=None):
     return settings
 
 
-def get_ssh_listing(address, path='.'):
+def get_ssh_listing(address, path, warn=True):
     command = 'ssh -o StrictHostKeychecking=no "%s" ls -aF "%s"' % (address, path)
     log('Command: \'%s\'' % command)
 
@@ -70,17 +70,20 @@ def get_ssh_listing(address, path='.'):
     return_code = pipe.returncode
     log('Return Code: %d' % return_code)
     log('BACK: %s' % str(communication))
+    error_message = None
+    items = None
     if return_code == 1 or communication[1].strip():
         error_message = communication[1].decode('utf8')
         # We have an error
         if error_message:
             log('Error: %s' % error_message)
-        sublime.message_dialog('Could not get directory listing for "%s" from "%s".\n%s' % (
+        if warn:
+            sublime.message_dialog('Could not get directory listing for "%s" from "%s".\n%s' % (
                                                                 path, address, error_message))
     else:
         items = communication[0].decode('utf8')
         items = [x.strip() for x in items.split('\n') if x.strip()]
-        return items
+    return {'error': error_message, 'items': items}
 
 
 def scp(from_path, to_path, create_if_missing=False):
@@ -154,7 +157,7 @@ class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
             return
         if selection is not None:
             self.path += self.items[selection]
-        if not self.path.endswith('/'):
+        if not self.path.endswith('/') and not self.path.endswith('@'):
             self.window.run_command(
                 'remote_edit_open_remote_file',
                 {'alias': self.alias, 'path': self.path}
@@ -165,10 +168,22 @@ class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
         if 'username' in self.ssh_config:
             address = '%s@%s' % (self.ssh_config['username'], address)
         # TODO: Allow for a starting directory in the settings
-        self.items = get_ssh_listing(address, self.path)
-        if self.items == None:
-            return
-        sublime.set_timeout(lambda: self.window.show_quick_panel(self.items, self.get_path), 0)
+        link = False
+        if self.path.endswith('@'):
+            self.path = self.path[:-1] + '/'
+            link = True
+        result = get_ssh_listing(address, self.path, not link)
+        if link and result['error'] is not None:
+            log('Link Failback, "%s" is not a directory. Trying file.' % self.path)
+            self.window.run_command(
+                'remote_edit_open_remote_file',
+                {'alias': self.alias, 'path': self.path[:-1]}
+            )
+        else:
+            self.items = result.get('items')
+            if self.items == None:
+                return
+            sublime.set_timeout(lambda: self.window.show_quick_panel(self.items, self.get_path), 0)
 
 
 class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
