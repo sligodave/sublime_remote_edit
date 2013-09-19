@@ -17,34 +17,37 @@ def log(msg):
         print('[Remote Edit]: ' + str(msg))
 
 
-def get_ssh_config(alias, window=None):
+def get_settings(window=None, create_if_missing=None):
     """
-    Find the scp configuration based on the alias supplied.
-    Look in the current project and then the plugin's settings file.
+    Look in the current project file and also the main settings file for settings.
     """
     if not window:
         window = sublime.active_window()
 
-    settings = window.project_data()
-    settings = {} if not settings else settings.get('remote_edit')
-    settings = {} if not isinstance(settings, dict) else settings
-    create_if_missing = settings.get('create_if_missing')
-    settings = settings.get('ssh_configs')
-    settings = {} if not isinstance(settings, dict) else settings
-    config = settings.get(alias)
+    settings = {
+        'create_if_missing': create_if_missing,
+        'ssh_configs': {}
+    }
 
-    settings = sublime.load_settings('RemoteEdit.sublime-settings')
-    settings = {} if not settings else settings
-    if create_if_missing is None:
-        create_if_missing = settings.get('create_if_missing')
-    settings = settings.get("ssh_configs")
-    settings = {} if not isinstance(settings, dict) else settings
-    if config is None:
-        config = settings.get(alias)
-    if config is not None:
-        if create_if_missing is not None and not 'create_if_missing' in config:
-            config['create_if_missing'] = create_if_missing
-        return config
+    for sub_settings in [
+        sublime.load_settings('RemoteEdit.sublime-settings'),
+        window.project_data().get('remote_edit')
+    ]:
+        if sub_settings is None:
+            continue
+
+        sub_settings = {} if not sub_settings else sub_settings
+
+        if create_if_missing is not None:
+            create_if_missing = sub_settings.get('create_if_missing')
+            create_if_missing = False if not isinstance(create_if_missing, bool) else create_if_missing
+            settings['create_if_missing'] = create_if_missing
+
+        ssh_configs = sub_settings.get("ssh_configs")
+        ssh_configs = {} if not isinstance(ssh_configs, dict) else ssh_configs
+        settings['ssh_configs'] = ssh_configs
+
+    return settings
 
 
 def scp(from_path, to_path, create_if_missing=False):
@@ -78,41 +81,28 @@ def scp(from_path, to_path, create_if_missing=False):
             log('Error: %s' % error_message)
             # It's not a missing error or src is local and it's missing or
             # we aren't creating if remote src is missing
-
             if not 'no such file or directory' in error_message.lower() or\
                 'please try again' in error_message.lower() or\
                 from_path.find('@') == -1 or not create_if_missing:
                 sublime.error_message(error_message)
             # Else if it is a missing remote src error
-            elif to_path.find('@') == -1:
+            elif to_path.find('@') == -1 and create_if_missing:
                 # We were copying to local machine
                 # and file doesn't exist on remote machine
                 sublime.status_message('Could not get file, so creating it')
                 open(to_path, 'w').close()
+            else:
+                sublime.status_message('Could not get file, not creating it')
 
 
 class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
     def run(self):
+        settings = get_settings(self.window)
+
         self.all_aliases = []
 
-        settings = sublime.load_settings('RemoteEdit.sublime-settings')
-        settings = {} if not settings else settings
-        settings = settings.get("ssh_configs")
-        settings = {} if not isinstance(settings, dict) else settings
-
-        for alias, config in settings.items():
-            alias = alias if config.get('address', alias) == alias else\
-                [alias, 'Address: %s' % config.get('address', alias)]
-            self.all_aliases.append(alias)
-
-        settings = self.window.project_data()
-        settings = {} if not settings else settings.get('remote_edit')
-        settings = {} if not isinstance(settings, dict) else settings
-        settings = settings.get('ssh_configs')
-        settings = {} if not isinstance(settings, dict) else settings
-
-        for alias, config in settings.items():
-            alias = [alias, 'Address: %s' % config.get('address', alias)]
+        for alias, ssh_config in settings['ssh_configs'].items():
+            alias = [alias, 'Address: %s' % ssh_config.get('address', alias)]
             self.all_aliases.append(alias)
         self.all_aliases.sort(key=lambda x: x[0])
 
@@ -136,49 +126,43 @@ class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
         del self.alias
         self.window.run_command(
             'remote_edit_open_remote_file',
-            {'config_alias': alias, 'path': path}
+            {'alias': alias, 'path': path}
         )
 
 
 class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
     def run(
             self,
-            config_alias,
+            alias,
             path,
-            override_create_if_missing=False,
-            create_if_missing=True
+            create_if_missing=None
         ):
         """
-        Given a config alias and a path to a file on a remote server.
+        Given a settings alias and a path to a file on a remote server.
         Scp the file to a temp location on the local machine and open
         for editing. Record a record of the file so we know where to
         save it back to on the remote server, on save.
         """
-        log('Open: %s "%s" %s %s' % (
-            config_alias,
-            path,
-            override_create_if_missing,
-            create_if_missing
-            )
-        )
+        log('Open: %s "%s" %s' % (alias, path, create_if_missing))
 
-        config = get_ssh_config(config_alias, self.window)
-        if config is None:
-            sublime.error_message('Cound not find config alias "%s".' %
-                                                                config_alias)
+        settings = get_settings(self.window, create_if_missing=create_if_missing)
+        create_if_missing = settings['create_if_missing']
+        ssh_config = settings['ssh_configs'].get(alias)
+        if ssh_config is None:
+            sublime.error_message('Cound not find ssh config alias "%s".' % alias)
             return
-        if override_create_if_missing or not 'create_if_missing' in config:
-            config['create_if_missing'] = create_if_missing
-        log('Config: %s' % str(config))
+
+        log('SSH Config: %s' % str(ssh_config))
 
         line_no = '0'
         if ':' in path:
             path, line_no = path.split(':', 1)
 
-        scp_path = '%s:%s' % (config.get('address', config_alias), path)
-        if 'username' in config:
-            scp_path = '%s@%s' % (config['username'], scp_path)
+        scp_path = '%s:%s' % (ssh_config.get('address', alias), path)
+        if 'username' in ssh_config:
+            scp_path = '%s@%s' % (ssh_config['username'], scp_path)
 
+        # Do we already have this remote file open?
         view = temp_path = None
         for cur_view in self.window.views():
             settings = cur_view.settings()
@@ -186,32 +170,32 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
                 settings.get('scp_path') == scp_path and\
                 settings.get('temp_path'):
                 view = cur_view
-                temp_path = settings.get('temp_path')
                 break
+        else:
+            temp_path = os.path.join(tempfile.mkdtemp(), os.path.basename(path))
 
-        if temp_path is None or view is None:
-            file_name = os.path.basename(path)
-            temp_path = tempfile.mkdtemp()
-            temp_path = os.path.join(temp_path, file_name)
-
-            scp(scp_path, temp_path, config['create_if_missing'])
+            scp(scp_path, temp_path, create_if_missing)
 
             if not os.path.exists(temp_path):
                 return
 
-            temp_path_line_no = '%s:%s' % (temp_path, line_no)
-            view = self.window.open_file(
-                temp_path_line_no,
-                sublime.ENCODED_POSITION
-            )
+            view = self.window.open_file(temp_path)
             settings = view.settings()
+            settings.set('is_remote_edit', True)
             settings.set('scp_path', scp_path)
             settings.set('temp_path', temp_path)
-            settings.set('create_if_missing', config['create_if_missing'])
-            settings.set('is_remote_edit', True)
+            settings.set('create_if_missing', create_if_missing)
+
         log('Opened: "%s"' % scp_path)
         log('Temp: "%s"' % temp_path)
         self.window.focus_view(view)
+
+        if line_no and line_no.isdigit():
+            view.sel().clear()
+            point = view.text_point(int(line_no), 0)
+            region = sublime.Region(point, point)
+            view.sel().add(region)
+            view.show(region)
 
 
 class RemoteEditListener(sublime_plugin.EventListener):
@@ -221,13 +205,14 @@ class RemoteEditListener(sublime_plugin.EventListener):
         """
         settings = view.settings()
         if settings.get('is_remote_edit') and\
+            settings.has('create_if_missing') and\
             settings.has('scp_path') and\
             settings.has('temp_path'):
             log('Saved: "%s"' % settings.get('scp_path'))
             scp(
                 settings.get('temp_path'),
                 settings.get('scp_path'),
-                settings.get('create_if_missing', False)
+                settings.get('create_if_missing')
             )
 
     def on_close(self, view):
@@ -241,7 +226,5 @@ class RemoteEditListener(sublime_plugin.EventListener):
             settings.has('temp_path'):
             log('Closed: "%s"' % settings.get('scp_path'))
             log('Deleted: "%s"' % os.path.dirname(settings.get('temp_path')))
-            if os.path.exists(settings.get('temp_path')):
-                os.unlink(settings.get('temp_path'))
-            if os.path.exists(os.path.dirname(settings.get('temp_path'))):
-                os.rmdir(os.path.dirname(settings.get('temp_path')))
+            os.unlink(settings.get('temp_path'))
+            os.rmdir(os.path.dirname(settings.get('temp_path')))

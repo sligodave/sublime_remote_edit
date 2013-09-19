@@ -1,3 +1,3 @@
 #!/bin/bash
 
-subl --command 'remote_edit_open_remote_file {"config_alias": "'$1'", "path": "'$2'"}'
+subl --command 'remote_edit_open_remote_file {"alias": "'$1'", "path": "'$2'"}'
