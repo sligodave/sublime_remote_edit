@@ -23,7 +23,7 @@ Packages/User/RemoteEdit.sublime-settings
 
 Create aliass, an alias points to a configuration for a specific server.
 
-```
+```json
 	{
 		"debug": false,
 		"ssh_configs": {
@@ -49,7 +49,7 @@ Take note though, no passwords are supported, you need to register your public k
 
 In your current project file, you can also add aliases:
 
-```
+```json
 	{
 		"folders":
 		[
