@@ -92,6 +92,10 @@ Invoke it with:
 
 This is a work in progress!
 
+Requires your ssh public key to be registered with the remote machines ssh
+
+Requires scp to be available on the command line
+
 It's working away but there may be bugs.
 
 While sublime is open the local temp file will remember where it came from, so it'll save back when a save happens.
