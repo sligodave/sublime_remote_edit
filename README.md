@@ -3,6 +3,16 @@ RemoteEdit
 
 Open a file from a remote server locally, edit and save back remotely again.
 
+Feed it a preconfigured alias for a remote machine and a path on that machine.
+
+This will scp that file to a temp location locally for editing but will save all save events to the remote server too.
+
+When you close the file, the local temp file is deleted.
+
+NOTE: If sublime is closed and reopened, the temp file no longer has it's connection with the remote machine and it's source.
+All saves will only happen to the local file at that stage.
+
+
 ## Installation:
 
 
