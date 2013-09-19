@@ -1,3 +1,5 @@
 [
-    { "caption": "Remote Edit: Open Remote File Prompt", "command": "remote_edit_open_remote_file_prompt" }
+    { "caption": "Remote Edit: Open Remote File Prompt", "command": "remote_edit_open_remote_file_prompt" },
+    { "caption": "Remote Edit: Reload All Remote Files", "command": "remote_edit_reload_remote_file", "args": {"all": true}},
+    { "caption": "Remote Edit: Reload Current Remote File", "command": "remote_edit_reload_remote_file" }
 ]

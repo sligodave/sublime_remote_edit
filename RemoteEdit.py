@@ -82,6 +82,7 @@ def get_ssh_listing(address, path='.'):
         items = [x.strip() for x in items.split('\n') if x.strip()]
         return items
 
+
 def scp(from_path, to_path, create_if_missing=False):
     """
     Call out to the command line scp.
@@ -195,10 +196,11 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
         log('SSH Config: %s' % str(ssh_config))
 
         line_no = '0'
+        real_path = path
         if ':' in path:
-            path, line_no = path.split(':', 1)
+            real_path, line_no = path.split(':', 1)
 
-        scp_path = '%s:%s' % (ssh_config.get('address', alias), path)
+        scp_path = '%s:%s' % (ssh_config.get('address', alias), real_path)
         if 'username' in ssh_config:
             scp_path = '%s@%s' % (ssh_config['username'], scp_path)
 
@@ -206,13 +208,11 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
         view = temp_path = None
         for cur_view in self.window.views():
             settings = cur_view.settings()
-            if settings.get('is_remote_edit') and\
-                settings.get('scp_path') == scp_path and\
-                settings.get('temp_path'):
+            if settings.get('remote_edit_scp_path') == scp_path:
                 view = cur_view
                 break
         else:
-            temp_path = os.path.join(tempfile.mkdtemp(), os.path.basename(path))
+            temp_path = os.path.join(tempfile.mkdtemp(), os.path.basename(real_path))
 
             scp(scp_path, temp_path, create_if_missing)
 
@@ -221,10 +221,11 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
 
             view = self.window.open_file(temp_path)
             settings = view.settings()
-            settings.set('is_remote_edit', True)
-            settings.set('scp_path', scp_path)
-            settings.set('temp_path', temp_path)
-            settings.set('create_if_missing', create_if_missing)
+            settings.set('remote_edit_alias', alias)
+            settings.set('remote_edit_path', path)
+            settings.set('remote_edit_scp_path', scp_path)
+            settings.set('remote_edit_temp_path', temp_path)
+            settings.set('remote_edit_create_if_missing', create_if_missing)
 
         log('Opened: "%s"' % scp_path)
         log('Temp: "%s"' % temp_path)
@@ -238,21 +239,48 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
             view.show(region)
 
 
+class RemoteEditReloadRemoteFileCommand(sublime_plugin.WindowCommand):
+    def run(self, all=False):
+        active_view = self.window.active_view()
+        if all:
+            views = self.window.views()
+        else:
+            views = [active_view]
+        for view in views:
+            settings = view.settings()
+            if settings.get('remote_edit_scp_path') and\
+                settings.get('remote_edit_temp_path'):
+                save_as_active = False
+                if view == active_view:
+                    save_as_active = True
+                self.window.focus_view(view)
+                self.window.run_command('close')
+                self.window.run_command(
+                    'remote_edit_open_remote_file',
+                    {
+                        'alias': settings.get('remote_edit_alias'),
+                        'path': settings.get('remote_edit_path'),
+                        'create_if_missing': settings.get('remote_edit_create_if_missing')
+                    }
+                )
+                active_view = self.window.active_view()
+        self.window.focus_view(active_view)
+
+
 class RemoteEditListener(sublime_plugin.EventListener):
     def on_post_save(self, view):
         """
         When a remote file is saved, save it back to the remote server.
         """
         settings = view.settings()
-        if settings.get('is_remote_edit') and\
-            settings.has('create_if_missing') and\
-            settings.has('scp_path') and\
-            settings.has('temp_path'):
-            log('Saved: "%s"' % settings.get('scp_path'))
+        if settings.has('remote_edit_create_if_missing') and\
+            settings.has('remote_edit_scp_path') and\
+            settings.has('remote_edit_temp_path'):
+            log('Saved: "%s"' % settings.get('remote_edit_scp_path'))
             scp(
-                settings.get('temp_path'),
-                settings.get('scp_path'),
-                settings.get('create_if_missing')
+                settings.get('remote_edit_temp_path'),
+                settings.get('remote_edit_scp_path'),
+                settings.get('remote_edit_create_if_missing')
             )
 
     def on_close(self, view):
@@ -261,10 +289,9 @@ class RemoteEditListener(sublime_plugin.EventListener):
         We also no longer keep a record of it in our remote files list.
         """
         settings = view.settings()
-        if settings.get('is_remote_edit') and\
-            settings.has('scp_path') and\
-            settings.has('temp_path'):
-            log('Closed: "%s"' % settings.get('scp_path'))
-            log('Deleted: "%s"' % os.path.dirname(settings.get('temp_path')))
-            os.unlink(settings.get('temp_path'))
-            os.rmdir(os.path.dirname(settings.get('temp_path')))
+        if settings.has('remote_edit_scp_path') and\
+            settings.has('remote_edit_temp_path'):
+            log('Closed: "%s"' % settings.get('remote_edit_scp_path'))
+            log('Deleted: "%s"' % os.path.dirname(settings.get('remote_edit_temp_path')))
+            os.unlink(settings.get('remote_edit_temp_path'))
+            os.rmdir(os.path.dirname(settings.get('remote_edit_temp_path')))
