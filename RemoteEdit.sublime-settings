@@ -1,0 +1,15 @@
+{
+	"debug": false,
+	"ssh_configs": {
+		"NAME_YOUR_CONFIG": {
+			// Address of the remote server
+			// Not required, will default to the "ALIAS_NAME" string
+			"address": "IPADDRESS_OR_SERVERNAME",
+			// Username to log into server with
+			// Not required, the command line scp will default it to current user
+			"username": "USERNAME_ON_REMOTE_MACHINE"
+			// NOTE: Remember, to authenticate you need to have your pub key
+			// registered in the remote server ssh's authorized_keys file.
+		},
+	}
+}
