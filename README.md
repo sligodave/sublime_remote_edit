@@ -55,6 +55,12 @@ Take note though, no passwords are supported, you need to register your public k
 
     [Passwordless ssh](http://www.linuxproblem.org/art_9.html)
 
+Once you have your keys generated you can use this each time to send your pub key to a remote machine:
+
+```bash
+    cat ~/.ssh/id_rsa.pub | ssh USERNAME@REMOTE_MACHINE 'cat >> .ssh/authorized_keys'
+```
+
 ### Project file:
 
 In your current project file, you can also add aliases:

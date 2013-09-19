@@ -13,7 +13,7 @@ def log(msg):
     Simple logging function
     """
     settings = sublime.load_settings('RemoteEdit.sublime-settings')
-    if settings.get('debug', False):
+    if get_settings().get('debug', False):
         print('[Remote Edit]: ' + str(msg))
 
 
@@ -25,6 +25,7 @@ def get_settings(window=None, create_if_missing=None):
         window = sublime.active_window()
 
     settings = {
+        'debug': False,
         'create_if_missing': create_if_missing,
         'ssh_configs': {}
     }
@@ -39,13 +40,16 @@ def get_settings(window=None, create_if_missing=None):
         sub_settings = {} if not sub_settings else sub_settings
 
         if create_if_missing is not None:
-            create_if_missing = sub_settings.get('create_if_missing')
-            create_if_missing = False if not isinstance(create_if_missing, bool) else create_if_missing
-            settings['create_if_missing'] = create_if_missing
+            create_if_missing = sub_settings.get('create_if_missing', False)
+            if isinstance(create_if_missing, bool):
+                settings['create_if_missing'] = create_if_missing
+
+        if isinstance(sub_settings.get('debug'), bool):
+            settings['debug'] = sub_settings.get('debug')
 
         ssh_configs = sub_settings.get("ssh_configs")
         ssh_configs = {} if not isinstance(ssh_configs, dict) else ssh_configs
-        settings['ssh_configs'] = ssh_configs
+        settings['ssh_configs'].update(ssh_configs)
 
     return settings
 
@@ -66,12 +70,13 @@ def get_ssh_listing(address, path='.'):
     return_code = pipe.returncode
     log('Return Code: %d' % return_code)
     log('BACK: %s' % str(communication))
-    if return_code == 1:
+    if return_code == 1 or communication[1].strip():
         error_message = communication[1].decode('utf8')
         # We have an error
         if error_message:
             log('Error: %s' % error_message)
-        sublime.status_message('Could not get directory listing for "%s" from "%s"' % (path, address))
+        sublime.message_dialog('Could not get directory listing for "%s" from "%s".\n%s' % (
+                                                                path, address, error_message))
     else:
         items = communication[0].decode('utf8')
         items = [x.strip() for x in items.split('\n') if x.strip()]
@@ -116,10 +121,10 @@ def scp(from_path, to_path, create_if_missing=False):
             elif to_path.find('@') == -1 and create_if_missing:
                 # We were copying to local machine
                 # and file doesn't exist on remote machine
-                sublime.status_message('Could not get file, so creating it')
+                sublime.message_dialog('Could not get file, so creating it')
                 open(to_path, 'w').close()
             else:
-                sublime.status_message('Could not get file, not creating it')
+                sublime.message_dialog('Could not get file, not creating it')
 
 
 class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
@@ -160,6 +165,8 @@ class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
             address = '%s@%s' % (self.ssh_config['username'], address)
         # TODO: Allow for a starting directory in the settings
         self.items = get_ssh_listing(address, self.path)
+        if self.items == None:
+            return
         sublime.set_timeout(lambda: self.window.show_quick_panel(self.items, self.get_path), 0)
 
 
