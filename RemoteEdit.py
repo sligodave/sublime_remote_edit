@@ -243,4 +243,5 @@ class RemoteEditListener(sublime_plugin.EventListener):
             log('Deleted: "%s"' % os.path.dirname(settings.get('temp_path')))
             if os.path.exists(settings.get('temp_path')):
                 os.unlink(settings.get('temp_path'))
-            os.rmdir(os.path.dirname(settings.get('temp_path')))
+            if os.path.exists(os.path.dirname(settings.get('temp_path'))):
+                os.rmdir(os.path.dirname(settings.get('temp_path')))
