@@ -23,56 +23,60 @@ Packages/User/RemoteEdit.sublime-settings
 
 Create aliass, an alias points to a configuration for a specific server.
 
-{
-	"debug": false,
-	"ssh_configs": {
-		"ALIASNAME": {
-			// Address of the remote server
-			// Not required, will default to the "ALIAS_NAME" string
-			"address": "IPADDRESS_OR_SERVERNAME",
-			// Username to log into server with
-			// Not required, the command line scp will default it to current user
-			"username": "USERNAME_ON_REMOTE_MACHINE"
-			// NOTE: Remember, to authenticate you need to have your pub key
-			// registered in the remote server ssh's authorized_keys file.
-		},
+```
+	{
+		"debug": false,
+		"ssh_configs": {
+			"ALIASNAME": {
+				// Address of the remote server
+				// Not required, will default to the "ALIAS_NAME" string
+				"address": "IPADDRESS_OR_SERVERNAME",
+				// Username to log into server with
+				// Not required, the command line scp will default it to current user
+				"username": "USERNAME_ON_REMOTE_MACHINE"
+				// NOTE: Remember, to authenticate you need to have your pub key
+				// registered in the remote server ssh's authorized_keys file.
+			},
+		}
 	}
-}
+```
 
 Take note though, no passwords are supported, you need to register your public key with the server.
 
-[Passwordless ssh](http://www.linuxproblem.org/art_9.html)
+    [Passwordless ssh](http://www.linuxproblem.org/art_9.html)
 
 ### Project file:
 
 In your current project file, you can also add aliases:
 
-{
-	"folders":
-	[
-		{
-		}
-	],
-	"remote_edit":
+```
 	{
-		"ssh_configs":
-		{
-			"ALIASNAME":
+		"folders":
+		[
 			{
-				"address": "IPADDRESS_OR_SERVERNAME",
-				"username": "USERNAME_ON_REMOTE_MACHINE",
-				"create_if_missing": false
+			}
+		],
+		"remote_edit":
+		{
+			"ssh_configs":
+			{
+				"ALIASNAME":
+				{
+					"address": "IPADDRESS_OR_SERVERNAME",
+					"username": "USERNAME_ON_REMOTE_MACHINE",
+					"create_if_missing": false
+				}
 			}
 		}
 	}
-}
+```
 
 
 ## Usage:
 
 ### With GoTo Anywhere command:
 
-"Remote Edit: Open Remote File Prompt"
+    "Remote Edit: Open Remote File Prompt"
 
 Will prompt for an "alias" and then a "path" on the remote machine. 
 
@@ -81,7 +85,7 @@ Will prompt for an "alias" and then a "path" on the remote machine.
 Add the script to your path.
 Invoke it with:
 
-> subl_remote_edit ALIAS PATH_ON_REMOTE_MACHINE
+    > subl_remote_edit ALIAS PATH_ON_REMOTE_MACHINE
 
 
 ## NOTES:
