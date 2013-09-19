@@ -50,6 +50,33 @@ def get_settings(window=None, create_if_missing=None):
     return settings
 
 
+def get_ssh_listing(address, path='.'):
+    command = 'ssh -o StrictHostKeychecking=no "%s" ls -aF "%s"' % (address, path)
+    log('Command: \'%s\'' % command)
+
+    pipe = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True
+    )
+    pipe.wait()
+    communication = pipe.communicate()
+    return_code = pipe.returncode
+    log('Return Code: %d' % return_code)
+    log('BACK: %s' % str(communication))
+    if return_code == 1:
+        error_message = communication[1].decode('utf8')
+        # We have an error
+        if error_message:
+            log('Error: %s' % error_message)
+        sublime.status_message('Could not get directory listing for "%s" from "%s"' % (path, address))
+    else:
+        items = communication[0].decode('utf8')
+        items = [x.strip() for x in items.split('\n') if x.strip()]
+        return items
+
 def scp(from_path, to_path, create_if_missing=False):
     """
     Call out to the command line scp.
@@ -97,11 +124,12 @@ def scp(from_path, to_path, create_if_missing=False):
 
 class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
     def run(self):
-        settings = get_settings(self.window)
+        self.settings = get_settings(self.window)
 
         self.all_aliases = []
+        self.path = './'
 
-        for alias, ssh_config in settings['ssh_configs'].items():
+        for alias, ssh_config in self.settings['ssh_configs'].items():
             alias = [alias, 'Address: %s' % ssh_config.get('address', alias)]
             self.all_aliases.append(alias)
         self.all_aliases.sort(key=lambda x: x[0])
@@ -112,22 +140,27 @@ class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
         if selection < 0 or selection >= len(self.all_aliases):
             return
         self.alias = self.all_aliases[selection][0]
+        self.ssh_config = self.settings['ssh_configs'][self.alias]
+        self.get_path()
 
-        self.window.show_input_panel(
-            'Enter remote file to open:',
-            '',
-            self.on_path_done,
-            None,
-            None
+    def get_path(self, selection=None):
+        if selection == -1:
+            return
+        if selection is not None:
+            self.path += self.items[selection]
+        if not self.path.endswith('/'):
+            self.window.run_command(
+                'remote_edit_open_remote_file',
+                {'alias': self.alias, 'path': self.path}
             )
+            return
 
-    def on_path_done(self, path):
-        alias = self.alias
-        del self.alias
-        self.window.run_command(
-            'remote_edit_open_remote_file',
-            {'alias': alias, 'path': path}
-        )
+        address = self.ssh_config.get('address', self.alias)
+        if 'username' in self.ssh_config:
+            address = '%s@%s' % (self.ssh_config['username'], address)
+        # TODO: Allow for a starting directory in the settings
+        self.items = get_ssh_listing(address, self.path)
+        sublime.set_timeout(lambda: self.window.show_quick_panel(self.items, self.get_path), 0)
 
 
 class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
