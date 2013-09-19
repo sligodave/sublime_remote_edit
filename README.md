@@ -112,6 +112,12 @@ While sublime is open the local temp file will remember where it came from, so i
 However, if you close sublime and open it again, that link is lost. So you are left with only a local copy of the file with no knowledge of it's remote source. I may change this and record the link in an external file at some stage.
 
 
+## ToDo:
+
+- ssh directory structure using panel, walk to required file.
+- prompt for alias, then use panel to get file.
+Update panel as user types. '/' means update list with new directory options until file is selected.
+
 ## Issues and suggestions:
 
 Fire on any issues or suggestions you have.

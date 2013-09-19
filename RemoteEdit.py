@@ -183,7 +183,8 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
         for cur_view in self.window.views():
             settings = cur_view.settings()
             if settings.get('is_remote_edit') and\
-                settings.get('scp_path') == scp_path:
+                settings.get('scp_path') == scp_path and\
+                settings.get('temp_path'):
                 view = cur_view
                 temp_path = settings.get('temp_path')
                 break
@@ -240,5 +241,6 @@ class RemoteEditListener(sublime_plugin.EventListener):
             settings.has('temp_path'):
             log('Closed: "%s"' % settings.get('scp_path'))
             log('Deleted: "%s"' % os.path.dirname(settings.get('temp_path')))
-            os.unlink(settings.get('temp_path'))
+            if os.path.exists(settings.get('temp_path')):
+                os.unlink(settings.get('temp_path'))
             os.rmdir(os.path.dirname(settings.get('temp_path')))
