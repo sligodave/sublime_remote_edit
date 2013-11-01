@@ -141,16 +141,31 @@ class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
             alias = [alias, 'Address: %s' % ssh_config.get('address', alias)]
             self.all_aliases.append(alias)
         self.all_aliases.sort(key=lambda x: x[0])
-        if self.all_aliases:
-            self.window.show_quick_panel(self.all_aliases, self.on_alias_done)
-        else:
-            sublime.message_dialog('[Remote Edit] Could not find any config aliases in the settings files')
+        self.all_aliases.append(['', 'MANUAL - Supply the settings now.'])
+        self.window.show_quick_panel(self.all_aliases, self.on_alias_done)
 
     def on_alias_done(self, selection):
         if selection < 0 or selection >= len(self.all_aliases):
             return
-        self.alias = self.all_aliases[selection][0]
-        self.ssh_config = self.settings['ssh_configs'][self.alias]
+        if selection == len(self.all_aliases) - 1:
+            self.window.show_input_panel(
+                '[USERNAME@]SERVER',
+                '',
+                self.on_manual_done,
+                None,
+                None
+            )
+        else:
+            self.alias = self.all_aliases[selection][0]
+            self.ssh_config = self.settings['ssh_configs'][self.alias]
+            self.get_path()
+
+    def on_manual_done(self, address):
+        self.ssh_config = {}
+        if '@' in address:
+            username, address = address.split('@', 1)
+            self.ssh_config['username'] = username
+        self.alias = address
         self.get_path()
 
     def get_path(self, selection=None):
