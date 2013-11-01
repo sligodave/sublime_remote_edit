@@ -1,9 +1,11 @@
 RemoteEdit
 ==========
 
-Open a file from a remote server locally, edit and save back remotely again.
+Open a file from a remote server locally, edit and seemlessly save back remotely again.
 
-Feed it a preconfigured alias for a remote machine and a path on that machine.
+Feed it a preconfigured alias for a remote machine and a path on that machine from the command line or
+use the GUI prompt to connect to your preconfigured servers and walk their directories.
+You can also provide a server that is not preconfigured at this stage.
 
 This will scp that file to a temp location locally for editing but will save all save events to the remote server too.
 
@@ -29,9 +31,9 @@ Clone this repository into your Sublime Text *Packages* directory.
 
 In the file:
 
-Packages/User/RemoteEdit.sublime-settings
+    Packages/User/RemoteEdit.sublime-settings
 
-Create aliass, an alias points to a configuration for a specific server.
+Create an alias, an alias points to a configuration for a specific server.
 
 ```json
 	{
@@ -45,13 +47,14 @@ Create aliass, an alias points to a configuration for a specific server.
 				// Not required, the command line scp will default it to current user
 				"username": "USERNAME_ON_REMOTE_MACHINE"
 				// NOTE: Remember, to authenticate you need to have your pub key
-				// registered in the remote server ssh's authorized_keys file.
+				// registered in the remote server ssh's authorized_keys file.,
+				"create_if_missing": false
 			},
 		}
 	}
 ```
 
-Take note though, no passwords are supported, you need to register your public key with the server.
+NOTE: no passwords are supported, you need to register your public key with the server.
 
 [Passwordless ssh](http://www.linuxproblem.org/art_9.html)
 
@@ -94,7 +97,12 @@ In your current project file, you can also add aliases:
 
     "Remote Edit: Open Remote File Prompt"
 
-Will prompt for an "alias" and then a "path" on the remote machine. 
+Will prompt for an "alias" and then allows you to walk on the remote machine.
+
+OR
+
+You can use this to provide a new server that is not already configured.
+
 
 ### From command line:
 
@@ -102,6 +110,17 @@ Add the script to your path.
 Invoke it with:
 
     > subl_remote_edit ALIAS PATH_ON_REMOTE_MACHINE
+
+
+## Other Commands in GoTo Anywhere Panel:
+
+    "Remote Edit: Reload All Remote Files"
+
+Will reload all remote files.
+
+    "Remote Edit: Reload Current Remote File"
+
+Will reload the current file if it's a remote file.
 
 
 ## NOTES:
@@ -112,17 +131,20 @@ Requires your ssh public key to be registered with the remote machines ssh
 
 Requires scp to be available on the command line
 
-It's working away but there may be bugs.
+It's working well but there may be bugs.
 
 While sublime is open the local temp file will remember where it came from, so it'll save back when a save happens.
 However, if you close sublime and open it again, that link is lost. So you are left with only a local copy of the file with no knowledge of it's remote source. I may change this and record the link in an external file at some stage.
 
+Closing and reopening the temp file will also break the link it has to it's remote origin.
+
+Basically, a temp file remembers it's remote origin as long as it remains open and sublime text remains open.
+
 
 ## ToDo:
 
-- ssh directory structure using panel, walk to required file.
-- prompt for alias, then use panel to get file.
-Update panel as user types. '/' means update list with new directory options until file is selected.
+- Update panel as user types. '/' means update list with new directory options until file is selected.
+
 
 ## Issues and suggestions:
 
