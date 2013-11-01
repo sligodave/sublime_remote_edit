@@ -12,9 +12,8 @@ def log(msg):
     """
     Simple logging function
     """
-    settings = sublime.load_settings('RemoteEdit.sublime-settings')
     if get_settings().get('debug', False):
-        print('[Remote Edit]: ' + str(msg))
+        print('[Remote Edit] ' + str(msg))
 
 
 def get_settings(window=None, create_if_missing=None):
@@ -78,7 +77,7 @@ def get_ssh_listing(address, path, warn=True):
         if error_message:
             log('Error: %s' % error_message)
         if warn:
-            sublime.message_dialog('Could not get directory listing for "%s" from "%s".\n%s' % (
+            sublime.message_dialog('[Remote Edit] Could not get directory listing for "%s" from "%s".\n%s' % (
                                                                 path, address, error_message))
     else:
         items = communication[0].decode('utf8')
@@ -125,10 +124,10 @@ def scp(from_path, to_path, create_if_missing=False):
             elif to_path.find('@') == -1 and create_if_missing:
                 # We were copying to local machine
                 # and file doesn't exist on remote machine
-                sublime.message_dialog('Could not get file, so creating it')
+                sublime.message_dialog('[Remote Edit] Could not get file, so creating it')
                 open(to_path, 'w').close()
             else:
-                sublime.message_dialog('Could not get file, not creating it')
+                sublime.message_dialog('[Remote Edit] Could not get file, not creating it')
 
 
 class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
@@ -142,8 +141,10 @@ class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
             alias = [alias, 'Address: %s' % ssh_config.get('address', alias)]
             self.all_aliases.append(alias)
         self.all_aliases.sort(key=lambda x: x[0])
-
-        self.window.show_quick_panel(self.all_aliases, self.on_alias_done)
+        if self.all_aliases:
+            self.window.show_quick_panel(self.all_aliases, self.on_alias_done)
+        else:
+            sublime.message_dialog('[Remote Edit] Could not find any config aliases in the settings files')
 
     def on_alias_done(self, selection):
         if selection < 0 or selection >= len(self.all_aliases):
@@ -205,7 +206,7 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
         create_if_missing = settings['create_if_missing']
         ssh_config = settings['ssh_configs'].get(alias)
         if ssh_config is None:
-            sublime.error_message('Cound not find ssh config alias "%s".' % alias)
+            sublime.error_message('[Remote Edit] Cound not find ssh config alias "%s".' % alias)
             return
 
         log('SSH Config: %s' % str(ssh_config))
