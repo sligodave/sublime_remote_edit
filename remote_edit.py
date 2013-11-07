@@ -221,8 +221,9 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
         create_if_missing = settings['create_if_missing']
         ssh_config = settings['ssh_configs'].get(alias)
         if ssh_config is None:
-            sublime.error_message('[Remote Edit] Cound not find ssh config alias "%s".' % alias)
-            return
+            # If we don't have the configuration,
+            # we treat it as if it was an empty configuration.
+            ssh_config = {}
 
         log('SSH Config: %s' % str(ssh_config))
 

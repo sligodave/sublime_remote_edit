@@ -112,6 +112,9 @@ Invoke it with:
     > subl_remote_edit ALIAS PATH_ON_REMOTE_MACHINE
 
 
+NOTE: If alias doesn't exist, it's the same as an empty alias configuration. In that case, the alias will be treated like the address of the server and everything else will default.
+
+
 ## Other Commands in GoTo Anywhere Panel:
 
     "Remote Edit: Reload All Remote Files"
