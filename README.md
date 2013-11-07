@@ -143,7 +143,6 @@ Basically, a temp file remembers it's remote origin as long as it remains open a
 
 ## ToDo:
 
-- Update panel as user types. '/' means update list with new directory options until file is selected.
 
 
 ## Issues and suggestions:
