@@ -29,10 +29,11 @@ def get_settings(window=None, create_if_missing=None):
         'ssh_configs': {}
     }
 
-    for sub_settings in [
-        sublime.load_settings('RemoteEdit.sublime-settings'),
-        window.project_data().get('remote_edit')
-    ]:
+    all_settings = [sublime.load_settings('RemoteEdit.sublime-settings')]
+    if hasattr(window, 'project_data'):
+        all_settings.append(window.project_data().get('remote_edit'))
+
+    for sub_settings in all_settings:
         if sub_settings is None:
             continue
 
@@ -68,7 +69,7 @@ def get_ssh_listing(address, path, warn=True):
     communication = pipe.communicate()
     return_code = pipe.returncode
     log('Return Code: %d' % return_code)
-    log('BACK: %s' % str(communication))
+    log('Returned: %s' % str(communication))
     error_message = None
     items = None
     if return_code == 1 or communication[1].strip():
