@@ -30,7 +30,7 @@ def get_settings(window=None, create_if_missing=None):
     }
 
     all_settings = [sublime.load_settings('RemoteEdit.sublime-settings')]
-    if hasattr(window, 'project_data'):
+    if hasattr(window, 'project_data') and window.project_data() is not None:
         all_settings.append(window.project_data().get('remote_edit'))
 
     for sub_settings in all_settings:
